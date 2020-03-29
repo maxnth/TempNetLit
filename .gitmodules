@@ -1,0 +1,3 @@
+[submodule "corpus/gerdracor"]
+	path = corpus/gerdracor
+	url = https://github.com/dracor-org/gerdracor
