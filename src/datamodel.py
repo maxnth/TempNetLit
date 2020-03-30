@@ -20,6 +20,7 @@ class Scene:
                                         the calculated matrices to the characters.
         base_adjacency_matrix (np.ndarray): Base adjacency matrix of all characters for the drama (filled with zeroes).
     """
+
     def __init__(self, drama_scene: etree.Element, character_map: Dict[str, int],
                  base_adjacency_matrix: np.ndarray):
         self.tree = drama_scene
@@ -47,6 +48,15 @@ class Scene:
                 second_node = self.character_map[edge[1]]
                 self.adjacency_matrix[first_node][second_node] += 1
                 self.adjacency_matrix[second_node][first_node] += 1
+
+    def visualize(self):
+        heat_map = sns.heatmap(self.adjacency_matrix, xticklabels=self.character_map.keys(),
+                               yticklabels=self.character_map.keys(), annot=True)
+
+        plt.title("Amount of interactions between to characters in this scene.")
+        plt.ylabel("Character name")
+
+        plt.show()
 
 
 class Drama:
