@@ -4,6 +4,9 @@ from pathlib import Path
 from lxml import etree
 import numpy as np
 
+import matplotlib.pyplot as plt
+import seaborn as sns
+
 ns_dict = {"tei": "http://www.tei-c.org/ns/1.0"}
 
 
@@ -54,24 +57,33 @@ class Drama:
 
     Attribute:
         tree (etree.Element): lxml etree element containing the root tree representation of the TEI encoded XML
+        title (str): title of the drama based on the TEI metadata annotation
         character_map (dict): Dictionary with names of characters which appear as speakrs in the drama as key and a
                             unique integer as value. The latter is used for mapping the indices of the calculated
                             matrices to the characters.
         base_adjacency_matrix (np.ndarray): Base adjacency matrix of all characters for the drama (filled with zeroes).
         scenes (List[Scene]): List of all scenes in the drama, represented by instances of the Scene class.
-                                    If a drama doesn't contain any scenes, acts are used as substitute.
+                              If a drama doesn't contain any scenes, acts are used as substitute.
         aggregate_adjacency_matrix (np.ndarray): An adjacancy matrix representing the aggregated frequency of
-                                                communication between characters.
+                                                 communication between characters.
     """
+
     def __init__(self, drama: Union[str, Path]):
         self.tree = self.get_root_tree(drama)
 
+        self.title = self.get_title()
         self.character_map = self.get_character_mapping()
         self.base_adjacency_matrix = self.build_base_adjacency_matrix()
         self.scenes = self.get_scenes()
         self.aggregate_adjacency_matrix = self.build_aggregate_adjacency_matrix()
 
-    def get_root_tree(self, path: Union[str, Path]) -> etree.Element:
+    def get_title(self) -> str:
+        main_title = " ".join(self.tree.xpath('//tei:title[@type="main"]/text()', namespaces=ns_dict))
+        sub_title = " ".join(self.tree.xpath('//tei:title[@type="sub"]/text()', namespaces=ns_dict))
+        return f"{main_title}. {sub_title}"
+
+    @staticmethod
+    def get_root_tree(path: Union[str, Path]) -> etree.Element:
         return etree.parse(path).getroot() if isinstance(path, str) else etree.parse(str(path)).getroot()
 
     def get_character_mapping(self) -> Dict[str, int]:
@@ -95,3 +107,12 @@ class Drama:
         scene_matrices = [scene.adjacency_matrix for scene in self.scenes]
         return sum(scene_matrices)
 
+    def visualize(self):
+        heat_map = sns.heatmap(self.aggregate_adjacency_matrix, xticklabels=self.character_map.keys(),
+                               yticklabels=self.character_map.keys(), annot=True)
+
+        plt.title("Amount of interactions between to characters.")
+        plt.suptitle(f"'{self.title}'")
+        plt.ylabel("Character name")
+
+        plt.show()
