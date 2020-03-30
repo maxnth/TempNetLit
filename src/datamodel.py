@@ -4,6 +4,8 @@ from pathlib import Path
 from lxml import etree
 import numpy as np
 
+import networkx as nx
+
 import matplotlib.pyplot as plt
 import seaborn as sns
 
@@ -93,8 +95,7 @@ class Drama:
         sub_title = " ".join(self.tree.xpath('//tei:title[@type="sub"]/text()', namespaces=ns_dict))
         return f"{main_title}. {sub_title}"
 
-    @staticmethod
-    def get_root_tree(path: Union[str, Path]) -> etree.Element:
+    def get_root_tree(self, path: Union[str, Path]) -> etree.Element:
         return etree.parse(path).getroot() if isinstance(path, str) else etree.parse(str(path)).getroot()
 
     def get_character_mapping(self) -> Dict[str, int]:
@@ -117,6 +118,14 @@ class Drama:
     def build_aggregate_adjacency_matrix(self) -> np.ndarray:
         scene_matrices = [scene.adjacency_matrix for scene in self.scenes]
         return sum(scene_matrices)
+
+    def export_graph(self) -> nx.graph:
+        graph = nx.from_numpy_matrix(self.aggregate_adjacency_matrix)
+        graph = nx.relabel_nodes(graph, {v: k for (k, v) in self.character_map.items()}, copy=False)
+        return graph
+
+    def draw_network_graph(self):
+        nx.draw(self.export_graph(), with_labels=True)
 
     def visualize(self):
         heat_map = sns.heatmap(self.aggregate_adjacency_matrix, xticklabels=self.character_map.keys(),
