@@ -24,10 +24,11 @@ class Scene:
     """
 
     def __init__(self, drama_scene: etree.Element, character_map: Dict[str, int],
-                 base_adjacency_matrix: np.ndarray):
+                 base_adjacency_matrix: np.ndarray, binary_weights=True):
         self.tree = drama_scene
         self.character_map = character_map
         self.adjacency_matrix = base_adjacency_matrix.copy()
+        self.binary_weights = binary_weights
 
         self.fill_adjacency_matrix()
 
@@ -36,7 +37,7 @@ class Scene:
 
         Note:
             Communication between characters is assumed when the speaking acts of two characters are in direct
-            neighborhood alas 
+            neighborhood alas
 
         """
         speech_acts = [speech_act.replace("#", "") for speech_act in
@@ -50,6 +51,16 @@ class Scene:
                 second_node = self.character_map[edge[1]]
                 self.adjacency_matrix[first_node][second_node] += 1
                 self.adjacency_matrix[second_node][first_node] += 1
+            if self.binary_weights:
+                np.where(self.adjacency_matrix > 0.0, 1, 0)
+
+    def export_graph(self) -> nx.graph:
+        graph = nx.from_numpy_matrix(self.adjacency_matrix)
+        graph = nx.relabel_nodes(graph, {v: k for (k, v) in self.character_map.items()}, copy=False)
+        return graph
+
+    def draw_network_graph(self):
+        nx.draw(self.export_graph(), with_labels=True)
 
     def visualize(self):
         heat_map = sns.heatmap(self.adjacency_matrix, xticklabels=self.character_map.keys(),
