@@ -78,7 +78,7 @@ class Drama:
                                                  communication between characters.
     """
 
-    def __init__(self, drama: Union[str, Path]):
+    def __init__(self, drama: Union[str, Path], binary_weights=True):
         self.tree = self.get_root_tree(drama)
 
         self.title = self.get_title()
@@ -86,6 +86,7 @@ class Drama:
         self.base_adjacency_matrix = self.build_base_adjacency_matrix()
         self.scenes = self.get_scenes()
         self.aggregate_adjacency_matrix = self.build_aggregate_adjacency_matrix()
+        self.binary_weights = binary_weights
 
     def get_title(self) -> str:
         main_title = " ".join(self.tree.xpath('//tei:title[@type="main"]/text()', namespaces=ns_dict))
@@ -111,7 +112,7 @@ class Drama:
 
         assert len(scenes) > 0, "Drama contains neither acts nor scenes."
 
-        return [Scene(elem, self.character_map, self.base_adjacency_matrix) for elem in scenes]
+        return [Scene(elem, self.character_map, self.base_adjacency_matrix, self.binary_weights) for elem in scenes]
 
     def build_aggregate_adjacency_matrix(self) -> np.ndarray:
         scene_matrices = [scene.adjacency_matrix for scene in self.scenes]
