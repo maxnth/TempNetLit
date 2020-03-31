@@ -59,7 +59,8 @@ class Scene:
         graph = nx.relabel_nodes(graph, {v: k for (k, v) in self.character_map.items()}, copy=False)
         return graph
 
-    def draw_network_graph(self):
+    def draw_network_graph(self, size=(10, 10)):
+        plt.figure(figsize=size)
         nx.draw(self.export_graph(), with_labels=True)
 
     def visualize(self, size=(10, 10)):
@@ -137,7 +138,8 @@ class Drama:
         graph = nx.relabel_nodes(graph, {v: k for (k, v) in self.character_map.items()}, copy=False)
         return graph
 
-    def draw_network_graph(self):
+    def draw_network_graph(self, size=(10, 10)):
+        plt.figure(figsize=size)
         nx.draw(self.export_graph(), with_labels=True)
 
     def visualize(self, size=(10, 10)):
