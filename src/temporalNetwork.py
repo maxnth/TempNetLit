@@ -10,6 +10,11 @@ import seaborn as sns
 
 
 class AggregateGraph:
+    """Representation of a multi layer drama graph as aggregate graph
+
+    Arguments:
+        drama (Drama): Drama as instance of a Drama object.
+    """
     def __init__(self, drama):
         self.drama = drama
         self.base_centrality = self.get_eigenvector_centrality(self.drama.export_graph())
@@ -36,6 +41,14 @@ class AggregateGraph:
 
 
 class TemporalGraph:
+    """Representation of a multi layer drama graph as multi layer temporal graph as proposed by Sandra D. Prado et al.
+    in 'Temporal Network Analysis of Literary Texts' (2016).
+
+    Arguments:
+        drama (Drama): Drama as instance of a Drama object.
+        e (int):
+
+    """
     def __init__(self, drama, e=1):
         self.drama = drama
         self.e = e
@@ -79,10 +92,7 @@ class TemporalGraph:
 
     def build_supra_matrix(self):
         scenes = self.drama.scenes
-        nodes = len(self.drama.character_map.keys())
         time_steps = len(scenes)
-
-        identity_matrix = np.eye(nodes, nodes)
 
         supra_matrix = pd.DataFrame(np.nan, index=list(range(time_steps)), columns=list(range(time_steps)))
 
