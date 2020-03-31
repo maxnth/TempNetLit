@@ -1,4 +1,4 @@
-import statistics
+from typing import Tuple
 
 import numpy as np
 import pandas as pd
@@ -54,6 +54,7 @@ class AggregateGraph:
         _df = pd.DataFrame(vitalities, index=[0])
         return _df
 
+
 class TemporalGraph:
     """Representation of a multi layer drama graph as multi layer temporal graph as proposed by Sandra D. Prado et al.
     in 'Temporal Network Analysis of Literary Texts' (2016).
@@ -65,41 +66,6 @@ class TemporalGraph:
 
     def __init__(self, drama):
         self.drama = drama
-
-    @staticmethod
-    def get_eigen_centrality(graph, mean=False, normalize=True) -> dict:
-        centralities = nx.eigenvector_centrality(graph)
-
-        if normalize:
-            N = len(centralities)
-            centralities = {key: (value / (N - 1) * (N - 2)) for key, value in centralities.items()}
-
-        if mean:
-            return statistics.mean(centralities.values())
-        return centralities
-
-    def get_scenes_centralities(self) -> pd.DataFrame:
-        scenes_df = pd.DataFrame(0, index=np.arange(1, len(self.drama.scenes) + 1),
-                                 columns=self.drama.character_map.keys())
-
-        for number, scene in enumerate(self.drama.scenes, 1):
-            centrality = self.get_eigen_centrality(scene.export_graph(), mean=False, normalize=True)
-
-            for character, centrality in centrality.items():
-                scenes_df.loc[number, character] = centrality
-
-        scenes_df[scenes_df <= 0.00001] = 0
-        return scenes_df
-
-    def plot_eigen_centralities(self, size=(10, 7)):
-        eigen_centralities_df = self.get_scenes_centralities()[::-1]
-
-        f, ax = plt.subplots(figsize=size)
-        ax = sns.heatmap(eigen_centralities_df, annot=True, vmin=0, vmax=1, cmap="YlOrRd")
-        ax.set(ylabel='scenes')
-        ax.yaxis.label.set_size(20)
-
-        plt.show()
 
     def build_supra_matrix(self, skip_character=""):
         supra_matrices = list()
@@ -142,7 +108,10 @@ class TemporalGraph:
         return supra_matrix
 
     @staticmethod
-    def get_eigenvector_centralities(graph: nx.Graph, max_iter=10000) -> dict:
+    def get_eigenvector_centralities(graph: nx.Graph, normalize=False, max_iter=10000) -> dict:
+        if normalize:
+            N = len(graph.nodes())
+            return {k: v/(N-1)*(N-2) for k, v in nx.eigenvector_centrality(graph, max_iter=max_iter).items()}
         return nx.eigenvector_centrality(graph, max_iter=max_iter)
 
     def get_freeman_index(self, graph: nx.Graph) -> int:
@@ -171,3 +140,26 @@ class TemporalGraph:
             vitalities[character] = baseline - self.get_freeman_index(_graph)
 
         return baseline, vitalities
+
+    def get_scenes_centralities(self) -> pd.DataFrame:
+        scenes_df = pd.DataFrame(0, index=np.arange(1, len(self.drama.scenes) + 1),
+                                 columns=self.drama.character_map.keys())
+
+        for number, scene in enumerate(self.drama.scenes, 1):
+            centrality = self.get_eigenvector_centralities(scene.export_graph(), normalize=True)
+
+            for character, centrality in centrality.items():
+                scenes_df.loc[number, character] = centrality
+
+        scenes_df[scenes_df <= 0.00001] = 0
+        return scenes_df
+
+    def plot_scenes_centrality(self, size=(10, 7)):
+        scenes_centrality = self.get_scenes_centralities()[::-1]
+
+        f, ax = plt.subplots(figsize=size)
+        ax = sns.heatmap(scenes_centrality, annot=True, vmin=0, vmax=1, cmap="YlOrRd")
+        ax.set(ylabel='scenes')
+        ax.yaxis.label.set_size(20)
+
+        plt.show()
