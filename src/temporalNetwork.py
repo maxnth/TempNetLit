@@ -48,11 +48,20 @@ class AggregateGraph:
 
         return baseline, vitalities
 
-    def plot_vitalities(self):
-        """TODO"""
+    def plot_vitality(self, size=(20, 10)):
         baseline, vitalities = self.get_vitalities()
-        _df = pd.DataFrame(vitalities, index=[0])
-        return _df
+
+        # Prepare data for plotting
+        data = ({k: v + baseline for k, v in vitalities.items()}.items())
+        x, y = zip(*data)
+
+        # Set plot options
+        fig, ax = plt.subplots(figsize=size)
+        ax.plot(x, y)
+        ax.axhline(y=baseline, xmin=0.0, xmax=1.0, color='r')
+        plt.xticks(x, x, rotation='vertical')
+
+        plt.show()
 
 
 class TemporalGraph:
@@ -111,7 +120,7 @@ class TemporalGraph:
     def get_eigenvector_centralities(graph: nx.Graph, normalize=False, max_iter=10000) -> dict:
         if normalize:
             N = len(graph.nodes())
-            return {k: v/(N-1)*(N-2) for k, v in nx.eigenvector_centrality(graph, max_iter=max_iter).items()}
+            return {k: v / (N - 1) * (N - 2) for k, v in nx.eigenvector_centrality(graph, max_iter=max_iter).items()}
         return nx.eigenvector_centrality(graph, max_iter=max_iter)
 
     def get_freeman_index(self, graph: nx.Graph) -> int:
@@ -140,6 +149,21 @@ class TemporalGraph:
             vitalities[character] = baseline - self.get_freeman_index(_graph)
 
         return baseline, vitalities
+
+    def plot_vitality(self, size=(20, 10)):
+        baseline, vitalities = self.get_vitalities()
+
+        # Prepare data for plotting
+        data = ({k: v + baseline for k, v in vitalities.items()}.items())
+        x, y = zip(*data)
+
+        # Set plot options
+        fig, ax = plt.subplots(figsize=size)
+        ax.plot(x, y)
+        ax.axhline(y=baseline, xmin=0.0, xmax=1.0, color='r')
+        plt.xticks(x, x, rotation='vertical')
+
+        plt.show()
 
     def get_scenes_centralities(self) -> pd.DataFrame:
         scenes_df = pd.DataFrame(0, index=np.arange(1, len(self.drama.scenes) + 1),
