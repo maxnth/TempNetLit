@@ -62,9 +62,10 @@ class Scene:
     def draw_network_graph(self):
         nx.draw(self.export_graph(), with_labels=True)
 
-    def visualize(self):
+    def visualize(self, size=(10, 10)):
+        fig, ax = plt.subplots(figsize=size)
         heat_map = sns.heatmap(self.adjacency_matrix, xticklabels=self.character_map.keys(),
-                               yticklabels=self.character_map.keys(), annot=True)
+                               yticklabels=self.character_map.keys(), annot=True, ax=ax)
 
         plt.title("Amount of interactions between to characters in this scene.")
         plt.ylabel("Character name")
@@ -93,21 +94,22 @@ class Drama:
 
     def __init__(self, drama: Union[str, Path], binary_weights=True):
         self.tree = self.get_root_tree(drama)
+        self.binary_weights = binary_weights
 
         self.title = self.get_title()
         self.character_map = self.get_character_mapping()
         self.base_adjacency_matrix = self.build_base_adjacency_matrix()
         self.scenes = self.get_scenes()
         self.aggregate_adjacency_matrix = self.build_aggregate_adjacency_matrix()
-        self.binary_weights = binary_weights
+
+    @staticmethod
+    def get_root_tree(path: Union[str, Path]) -> etree.Element:
+        return etree.parse(path).getroot() if isinstance(path, str) else etree.parse(str(path)).getroot()
 
     def get_title(self) -> str:
         main_title = " ".join(self.tree.xpath('//tei:title[@type="main"]/text()', namespaces=ns_dict))
         sub_title = " ".join(self.tree.xpath('//tei:title[@type="sub"]/text()', namespaces=ns_dict))
         return f"{main_title}. {sub_title}"
-
-    def get_root_tree(self, path: Union[str, Path]) -> etree.Element:
-        return etree.parse(path).getroot() if isinstance(path, str) else etree.parse(str(path)).getroot()
 
     def get_character_mapping(self) -> Dict[str, int]:
         characters = {sp.replace("#", "") for sp in self.tree.xpath("//tei:sp/@who", namespaces=ns_dict)}
@@ -138,9 +140,10 @@ class Drama:
     def draw_network_graph(self):
         nx.draw(self.export_graph(), with_labels=True)
 
-    def visualize(self):
+    def visualize(self, size=(10, 10)):
+        fig, ax = plt.subplots(figsize=size)
         heat_map = sns.heatmap(self.aggregate_adjacency_matrix, xticklabels=self.character_map.keys(),
-                               yticklabels=self.character_map.keys(), annot=True)
+                               yticklabels=self.character_map.keys(), annot=True, ax=ax)
 
         plt.title("Amount of interactions between to characters.")
         plt.suptitle(f"'{self.title}'")
