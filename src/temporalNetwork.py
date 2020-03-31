@@ -46,14 +46,11 @@ class TemporalGraph:
 
     Arguments:
         drama (Drama): Drama as instance of a Drama object.
-        e (int):
 
     """
-    def __init__(self, drama, e=1):
-        self.drama = drama
-        self.e = e
 
-        self.supra_adjacency_matrix = self.build_supra_matrix()
+    def __init__(self, drama):
+        self.drama = drama
 
     @staticmethod
     def get_eigen_centrality(graph, mean=False, normalize=True) -> dict:
@@ -90,27 +87,73 @@ class TemporalGraph:
 
         plt.show()
 
-    def build_supra_matrix(self):
+    def build_supra_matrix(self, skip_character=""):
+        supra_matrices = list()
+
         scenes = self.drama.scenes
+        characters = len(self.drama.character_map.values())
         time_steps = len(scenes)
 
-        supra_matrix = pd.DataFrame(np.nan, index=list(range(time_steps)), columns=list(range(time_steps)))
+        if skip_character:
+            try:
+                skip_index = self.drama.character_map[skip_character]
+            except KeyError as e:
+                raise e
 
-        for i in range(supra_matrix.shape[0]):
-            for j in range(supra_matrix.shape[0]):
-                if i == j:
-                    supra_matrix.loc[i, j] = scenes[i]
-                elif i == j + 1 or j == i + 1:
-                    supra_matrix.loc[i, j] = "Identity"
-                else:
-                    supra_matrix.loc[i, j] = "Zero"
+            characters -= 1
 
+        for timestep, scene in enumerate(self.drama.scenes):
+            scene_matrix = scene.adjacency_matrix
+            if skip_character:
+                scene_matrix = np.delete(scene_matrix, skip_index, 0)
+                scene_matrix = np.delete(scene_matrix, skip_index, 1)
+
+            time_step_matrices = [np.zeros((characters, characters)) for i in range(time_steps)]
+
+            if timestep == 0:
+                time_step_matrices[timestep] = scene_matrix
+                if timestep < len(scenes):
+                    time_step_matrices[timestep + 1] = np.eye(characters)
+            if timestep == len(scenes) - 1:
+                time_step_matrices[timestep] = scene_matrix
+                if timestep > 0:
+                    time_step_matrices[timestep - 1] = np.eye(characters)
+            else:
+                time_step_matrices[timestep] = scene_matrix
+                time_step_matrices[timestep + 1] = np.eye(characters)
+                time_step_matrices[timestep - 1] = np.eye(characters)
+            supra_matrices.append(np.hstack(time_step_matrices))
+
+        supra_matrix = np.vstack(supra_matrices)
         return supra_matrix
 
-    def freeman_index(self, aggregate=False):
-        if aggregate:
-            graph = self.drama.export_graph()
-            self.get_eigen_centrality.centrality = nx.eigenvector_centrality(graph)
+    @staticmethod
+    def get_eigenvector_centralities(graph: nx.Graph, max_iter=10000) -> dict:
+        return nx.eigenvector_centrality(graph, max_iter=max_iter)
 
-    def plot_freeman_index(self, aggregate=False):
-        pass
+    def get_freeman_index(self, graph: nx.Graph) -> int:
+        eigenvector_centralities = self.get_eigenvector_centralities(graph)
+        N = len(graph.nodes())
+
+        c_max = max(eigenvector_centralities.values())
+
+        counter = sum([c_max - c for c in eigenvector_centralities.values()])
+        denominator = (N - 1) * (N - 2)
+        normalisation = np.sqrt(N * (N - 1))
+
+        return (counter / denominator) * normalisation
+
+    @staticmethod
+    def get_graph(matrix: np.ndarray) -> nx.Graph:
+        return nx.from_numpy_matrix(matrix)
+
+    def get_vitalities(self) -> Tuple[int, dict]:
+        baseline = self.get_freeman_index(self.get_graph(self.build_supra_matrix()))
+        vitalities = dict()
+
+        for character in self.drama.character_map.keys():
+            _graph = self.get_graph(self.build_supra_matrix(skip_character=character))
+
+            vitalities[character] = baseline - self.get_freeman_index(_graph)
+
+        return baseline, vitalities
