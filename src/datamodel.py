@@ -124,7 +124,7 @@ class Drama:
         if len(scenes) == 0:
             scenes = self.tree.xpath('.//tei:div[@type="act"]', namespaces=ns_dict)
 
-        assert len(scenes) > 0, "Drama contains neither acts nor scenes."
+        assert len(scenes) > 0, "Drama contains neither acts nor scenes. Can't get processed."
 
         return [Scene(elem, self.character_map, self.base_adjacency_matrix, self.binary_weights) for elem in scenes]
 
