@@ -15,30 +15,44 @@ class AggregateGraph:
     Arguments:
         drama (Drama): Drama as instance of a Drama object.
     """
+
     def __init__(self, drama):
         self.drama = drama
-        self.base_centrality = self.get_eigenvector_centrality(self.drama.export_graph())
+        self.graph = drama.export_graph()
 
     @staticmethod
-    def get_eigenvector_centrality(graph, mean=True) -> dict:
-        if mean:
-            return statistics.mean(nx.eigenvector_centrality(graph).values())
-        return nx.eigenvector_centrality(graph)
+    def get_eigenvector_centralities(graph: nx.Graph, max_iter=10000) -> dict:
+        return nx.eigenvector_centrality(graph, max_iter=max_iter)
 
-    def get_vitalities(self) -> dict:
+    def get_freeman_index(self, graph: nx.Graph) -> int:
+        eigenvector_centralities = self.get_eigenvector_centralities(graph)
+        N = len(graph.nodes())
+
+        c_max = max(eigenvector_centralities.values())
+
+        counter = sum([c_max - c for c in eigenvector_centralities.values()])
+        denominator = (len(self.drama.character_map.keys()) - 1) * (len(self.drama.character_map.keys()) - 2)
+        normalisation = np.sqrt(N * (N - 1))
+
+        return (counter / denominator) * normalisation
+
+    def get_vitalities(self) -> Tuple[int, dict]:
+        baseline = self.get_freeman_index(self.graph)
         vitalities = dict()
 
         for character in self.drama.character_map.keys():
-            _graph = self.drama.export_graph().copy()
+            _graph = self.graph.copy()
             _graph.remove_node(character)
 
-            vitalities[character] = self.base_centrality - self.get_eigenvector_centrality(_graph)
+            vitalities[character] = baseline - self.get_freeman_index(_graph)
 
-        return vitalities
+        return baseline, vitalities
 
     def plot_vitalities(self):
-        pass
-
+        """TODO"""
+        baseline, vitalities = self.get_vitalities()
+        _df = pd.DataFrame(vitalities, index=[0])
+        return _df
 
 class TemporalGraph:
     """Representation of a multi layer drama graph as multi layer temporal graph as proposed by Sandra D. Prado et al.
