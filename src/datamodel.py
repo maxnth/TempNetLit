@@ -1,4 +1,5 @@
-from typing import Dict, List, Type, Union
+import itertools
+from typing import Dict, List, Union
 from pathlib import Path
 
 from lxml import etree
@@ -24,7 +25,7 @@ class Scene:
     """
 
     def __init__(self, drama_scene: etree.Element, character_map: Dict[str, int],
-                 base_adjacency_matrix: np.ndarray, binary_weights: bool):
+                 base_adjacency_matrix: np.ndarray, binary_weights):
         self.tree = drama_scene
         self.character_map = character_map
         self.adjacency_matrix = base_adjacency_matrix.copy()
@@ -40,11 +41,41 @@ class Scene:
             neighborhood alas
 
         """
-        speech_acts = [speech_act.replace("#", "") for speech_act in
+        speech_acts = [speech_act.split("#")[1:] for speech_act in
                        self.tree.xpath("./tei:sp/@who", namespaces=ns_dict)]
 
         if len(speech_acts) > 1:
             edges = [(current, prev) for current, prev in zip(speech_acts, speech_acts[1:])]
+
+            # Checks whether speech acts with multiple speaker exist and processes such edges
+            cleaned_edges = list()
+            for edge in edges:
+                if len(edge[0]) > 1 and len(edge[1]) > 1:
+                    multiple_speakers_one = [speaker.strip() for speaker in edge[0]]
+                    multiple_speakers_two = [speaker.strip() for speaker in edge[1]]
+                    for edge in list(itertools.combinations(multiple_speakers_one, 2)):
+                        cleaned_edges.append(edge)
+                    for edge in list(itertools.combinations(multiple_speakers_two, 2)):
+                        cleaned_edges.append(edge)
+                    for speaker_one in multiple_speakers_one:
+                        for speaker_two in multiple_speakers_two:
+                            cleaned_edges.append((speaker_one, speaker_two))
+                elif len(edge[0]) > 1:
+                    multiple_speakers = [speaker.strip() for speaker in edge[0]]
+                    for edge in list(itertools.combinations(multiple_speakers, 2)):
+                        cleaned_edges.append(edge)
+                    for speaker in multiple_speakers:
+                        cleaned_edges.append(("".join(edge[1]).strip(), speaker))
+                elif len(edge[1]) > 2:
+                    multiple_speakers = [speaker.strip() for speaker in edge[1]]
+                    for edge in list(itertools.combinations(multiple_speakers, 2)):
+                        cleaned_edges.append(edge)
+                    for speaker in multiple_speakers:
+                        cleaned_edges.append(("".join(edge[0]).strip(), speaker))
+                else:
+                    cleaned_edges.append(("".join(edge[0]).strip(), "".join(edge[1]).strip()))
+
+            edges = cleaned_edges
 
             for edge in edges:
                 first_node = self.character_map[edge[0]]
@@ -54,25 +85,12 @@ class Scene:
             if self.binary_weights:
                 self.adjacency_matrix = np.where(self.adjacency_matrix > 0.0, 1, 0)
 
-    def export_graph(self) -> nx.Graph:
-        """Converts and exports adjacency matrix as networkx Graph object
-
-        Return:
-            nx.Graph
-        """
+    def export_graph(self) -> nx.graph:
         graph = nx.from_numpy_matrix(self.adjacency_matrix)
         graph = nx.relabel_nodes(graph, {v: k for (k, v) in self.character_map.items()}, copy=False)
         return graph
 
     def plot_graph(self, size=(10, 10), node_scaling=500, width_scaling=1, heatmap=True):
-        """Plots networkx Graph representation of the adjacency matrix.
-
-        Arguments:
-            size (Tuple[int, int]): Sizing of the plotted graph.
-            node_scaling (int): Scaling factor for node size representation in the plotted graph.
-            width_scaling (int): Scaling factor for edge width in the plotted graph.
-            heatmap (bool): Whether to use heatmap color for nodes.
-        """
         graph = self.export_graph()
         degree = nx.degree(graph)
 
@@ -92,11 +110,6 @@ class Scene:
         fig.set_facecolor("#686868")
 
     def plot(self, size=(10, 10)):
-        """Plot adjacency matrix as heatmap.
-
-        Arguments:
-            size (Tuple[int, int]): Size of the plotted heatmap.
-        """
         plt.clf()
         fig, ax = plt.subplots(figsize=size)
         heat_map = sns.heatmap(self.adjacency_matrix, xticklabels=self.character_map.keys(),
@@ -116,7 +129,6 @@ class Drama:
 
     Attribute:
         tree (etree.Element): lxml etree element containing the root tree representation of the TEI encoded XML
-        binary_weights (bool): Whether to binarize values of adjacency matrix.
         title (str): title of the drama based on the TEI metadata annotation
         character_map (dict): Dictionary with names of characters which appear as speakrs in the drama as key and a
                             unique integer as value. The latter is used for mapping the indices of the calculated
@@ -148,15 +160,14 @@ class Drama:
         return f"{main_title}. {sub_title}"
 
     def get_character_mapping(self) -> Dict[str, int]:
-        characters = {sp.replace("#", "") for sp in self.tree.xpath("//tei:sp/@who", namespaces=ns_dict)}
+        characters = set(list(itertools.chain(*[sp.replace("#", "").split(" ") for sp in
+                                                self.tree.xpath("//tei:sp/@who", namespaces=ns_dict)])))
         return {character: num for (num, character) in enumerate(characters)}
 
     def build_base_adjacency_matrix(self) -> np.ndarray:
         return np.zeros((len(self.character_map), len(self.character_map)))
 
     def get_scenes(self) -> List[Scene]:
-        """Extracts all time steps from the drama. Uses scenes as default and acts as fallback option of no scenes exist.
-        """
         scenes = self.tree.xpath('.//tei:div[@type="scene"]', namespaces=ns_dict)
 
         if len(scenes) == 0:
@@ -171,24 +182,11 @@ class Drama:
         return sum(scene_matrices)
 
     def export_graph(self) -> nx.graph:
-        """Converts and exports aggregate adjacency matrix as networkx Graph object
-
-        Return:
-            nx.Graph
-        """
         graph = nx.from_numpy_matrix(self.aggregate_adjacency_matrix)
         graph = nx.relabel_nodes(graph, {v: k for (k, v) in self.character_map.items()}, copy=False)
         return graph
 
     def plot_graph(self, size=(10, 10), node_scaling=500, width_scaling=1, heatmap=True):
-        """Plots networkx Graph representation of the aggregate adjacency matrix.
-
-        Arguments:
-            size (Tuple[int, int]): Sizing of the plotted graph.
-            node_scaling (int): Scaling factor for node size representation in the plotted graph.
-            width_scaling (int): Scaling factor for edge width in the plotted graph.
-            heatmap (bool): Whether to use heatmap color for nodes.
-        """
         graph = self.export_graph()
         degree = nx.degree(graph)
 
@@ -208,11 +206,6 @@ class Drama:
         fig.set_facecolor("#686868")
 
     def plot(self, size=(10, 10)):
-        """Plot aggregate adjacency matrix as heatmap.
-
-        Arguments:
-            size (Tuple[int, int]): Size of the plotted heatmap.
-        """
         plt.clf()
         fig, ax = plt.subplots(figsize=size)
         heat_map = sns.heatmap(self.aggregate_adjacency_matrix, xticklabels=self.character_map.keys(),
