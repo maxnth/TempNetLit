@@ -24,7 +24,7 @@ class Scene:
     """
 
     def __init__(self, drama_scene: etree.Element, character_map: Dict[str, int],
-                 base_adjacency_matrix: np.ndarray, binary_weights=True):
+                 base_adjacency_matrix: np.ndarray, binary_weights):
         self.tree = drama_scene
         self.character_map = character_map
         self.adjacency_matrix = base_adjacency_matrix.copy()
@@ -52,7 +52,7 @@ class Scene:
                 self.adjacency_matrix[first_node][second_node] += 1
                 self.adjacency_matrix[second_node][first_node] += 1
             if self.binary_weights:
-                np.where(self.adjacency_matrix > 0.0, 1, 0)
+                self.adjacency_matrix = np.where(self.adjacency_matrix > 0.0, 1, 0)
 
     def export_graph(self) -> nx.graph:
         graph = nx.from_numpy_matrix(self.adjacency_matrix)
