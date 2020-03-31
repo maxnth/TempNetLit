@@ -82,6 +82,9 @@ class Scene:
                 second_node = self.character_map[edge[1]]
                 self.adjacency_matrix[first_node][second_node] += 1
                 self.adjacency_matrix[second_node][first_node] += 1
+            np.fill_diagonal(self.adjacency_matrix, 0)
+
+            # Binarization of character communications. All communication counts are set to zero when > 0
             if self.binary_weights:
                 self.adjacency_matrix = np.where(self.adjacency_matrix > 0.0, 1, 0)
 
