@@ -59,7 +59,7 @@ class Scene:
         graph = nx.relabel_nodes(graph, {v: k for (k, v) in self.character_map.items()}, copy=False)
         return graph
 
-    def draw_network_graph(self, size=(10, 10), node_scaling=500, width_scaling=1, heatmap=True):
+    def plot_graph(self, size=(10, 10), node_scaling=500, width_scaling=1, heatmap=True):
         graph = self.export_graph()
         degree = nx.degree(graph)
 
@@ -71,14 +71,14 @@ class Scene:
         if heatmap:
             nx.draw(graph, with_labels=True, node_size=node_sizes,
                     width=widths, cmap=plt.get_cmap('viridis'), node_color=node_sizes,
-                    font_color="white", font_weight="bold")
+                    font_color="red", font_weight="bold")
         else:
             nx.draw(graph, with_labels=True, node_size=node_sizes,
                     width=widths, font_weight="bold")
 
         fig.set_facecolor("#686868")
 
-    def visualize(self, size=(10, 10)):
+    def plot(self, size=(10, 10)):
         plt.clf()
         fig, ax = plt.subplots(figsize=size)
         heat_map = sns.heatmap(self.adjacency_matrix, xticklabels=self.character_map.keys(),
@@ -154,7 +154,7 @@ class Drama:
         graph = nx.relabel_nodes(graph, {v: k for (k, v) in self.character_map.items()}, copy=False)
         return graph
 
-    def draw_network_graph(self, size=(10, 10), node_scaling=500, width_scaling=1, heatmap=True):
+    def plot_graph(self, size=(10, 10), node_scaling=500, width_scaling=1, heatmap=True):
         graph = self.export_graph()
         degree = nx.degree(graph)
 
@@ -166,14 +166,14 @@ class Drama:
         if heatmap:
             nx.draw(graph, with_labels=True, node_size=node_sizes,
                     width=widths, cmap=plt.get_cmap('viridis'), node_color=node_sizes,
-                    font_color="white", font_weight="bold")
+                    font_color="black", font_weight="bold")
         else:
             nx.draw(graph, with_labels=True, node_size=node_sizes,
                     width=widths, font_weight="bold")
 
         fig.set_facecolor("#686868")
 
-    def visualize(self, size=(10, 10)):
+    def plot(self, size=(10, 10)):
         plt.clf()
         fig, ax = plt.subplots(figsize=size)
         heat_map = sns.heatmap(self.aggregate_adjacency_matrix, xticklabels=self.character_map.keys(),
@@ -184,4 +184,3 @@ class Drama:
         plt.ylabel("Character name")
 
         plt.show()
-
