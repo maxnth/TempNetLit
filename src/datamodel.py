@@ -55,7 +55,7 @@ class Scene:
                 self.adjacency_matrix = np.where(self.adjacency_matrix > 0.0, 1, 0)
 
     def export_graph(self) -> nx.graph:
-        graph = nx.from_numpy_matrix(self.aggregate_adjacency_matrix)
+        graph = nx.from_numpy_matrix(self.adjacency_matrix)
         graph = nx.relabel_nodes(graph, {v: k for (k, v) in self.character_map.items()}, copy=False)
         return graph
 
@@ -184,3 +184,4 @@ class Drama:
         plt.ylabel("Character name")
 
         plt.show()
+
