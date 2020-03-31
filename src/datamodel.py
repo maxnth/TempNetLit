@@ -24,7 +24,7 @@ class Scene:
     """
 
     def __init__(self, drama_scene: etree.Element, character_map: Dict[str, int],
-                 base_adjacency_matrix: np.ndarray, binary_weights):
+                 base_adjacency_matrix: np.ndarray, binary_weights: bool):
         self.tree = drama_scene
         self.character_map = character_map
         self.adjacency_matrix = base_adjacency_matrix.copy()
@@ -54,12 +54,25 @@ class Scene:
             if self.binary_weights:
                 self.adjacency_matrix = np.where(self.adjacency_matrix > 0.0, 1, 0)
 
-    def export_graph(self) -> nx.graph:
+    def export_graph(self) -> nx.Graph:
+        """Converts and exports adjacency matrix as networkx Graph object
+
+        Return:
+            nx.Graph
+        """
         graph = nx.from_numpy_matrix(self.adjacency_matrix)
         graph = nx.relabel_nodes(graph, {v: k for (k, v) in self.character_map.items()}, copy=False)
         return graph
 
     def plot_graph(self, size=(10, 10), node_scaling=500, width_scaling=1, heatmap=True):
+        """Plots networkx Graph representation of the adjacency matrix.
+
+        Arguments:
+            size (Tuple[int, int]): Sizing of the plotted graph.
+            node_scaling (int): Scaling factor for node size representation in the plotted graph.
+            width_scaling (int): Scaling factor for edge width in the plotted graph.
+            heatmap (bool): Whether to use heatmap color for nodes.
+        """
         graph = self.export_graph()
         degree = nx.degree(graph)
 
@@ -79,6 +92,11 @@ class Scene:
         fig.set_facecolor("#686868")
 
     def plot(self, size=(10, 10)):
+        """Plot adjacency matrix as heatmap.
+
+        Arguments:
+            size (Tuple[int, int]): Size of the plotted heatmap.
+        """
         plt.clf()
         fig, ax = plt.subplots(figsize=size)
         heat_map = sns.heatmap(self.adjacency_matrix, xticklabels=self.character_map.keys(),
@@ -98,6 +116,7 @@ class Drama:
 
     Attribute:
         tree (etree.Element): lxml etree element containing the root tree representation of the TEI encoded XML
+        binary_weights (bool): Whether to binarize values of adjacency matrix.
         title (str): title of the drama based on the TEI metadata annotation
         character_map (dict): Dictionary with names of characters which appear as speakrs in the drama as key and a
                             unique integer as value. The latter is used for mapping the indices of the calculated
@@ -136,6 +155,8 @@ class Drama:
         return np.zeros((len(self.character_map), len(self.character_map)))
 
     def get_scenes(self) -> List[Scene]:
+        """Extracts all time steps from the drama. Uses scenes as default and acts as fallback option of no scenes exist.
+        """
         scenes = self.tree.xpath('.//tei:div[@type="scene"]', namespaces=ns_dict)
 
         if len(scenes) == 0:
@@ -150,11 +171,24 @@ class Drama:
         return sum(scene_matrices)
 
     def export_graph(self) -> nx.graph:
+        """Converts and exports aggregate adjacency matrix as networkx Graph object
+
+        Return:
+            nx.Graph
+        """
         graph = nx.from_numpy_matrix(self.aggregate_adjacency_matrix)
         graph = nx.relabel_nodes(graph, {v: k for (k, v) in self.character_map.items()}, copy=False)
         return graph
 
     def plot_graph(self, size=(10, 10), node_scaling=500, width_scaling=1, heatmap=True):
+        """Plots networkx Graph representation of the aggregate adjacency matrix.
+
+        Arguments:
+            size (Tuple[int, int]): Sizing of the plotted graph.
+            node_scaling (int): Scaling factor for node size representation in the plotted graph.
+            width_scaling (int): Scaling factor for edge width in the plotted graph.
+            heatmap (bool): Whether to use heatmap color for nodes.
+        """
         graph = self.export_graph()
         degree = nx.degree(graph)
 
@@ -174,6 +208,11 @@ class Drama:
         fig.set_facecolor("#686868")
 
     def plot(self, size=(10, 10)):
+        """Plot aggregate adjacency matrix as heatmap.
+
+        Arguments:
+            size (Tuple[int, int]): Size of the plotted heatmap.
+        """
         plt.clf()
         fig, ax = plt.subplots(figsize=size)
         heat_map = sns.heatmap(self.aggregate_adjacency_matrix, xticklabels=self.character_map.keys(),
